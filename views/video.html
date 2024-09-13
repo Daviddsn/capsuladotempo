@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravar Vídeo - Cápsula do Tempo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background-color: black;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .button-group {
+            position: absolute;
+            bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .button-group button {
+            background-color: rgba(255, 255, 255, 0.8);
+            color: black;
+            border: none;
+            border-radius: 50%;
+            padding: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background-color 0.3s;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .close-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .close-button:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <video id="video" autoplay playsinline muted></video>
+
+    <!-- Botão para fechar a câmera (voltar à página anterior) -->
+    <button class="close-button" id="close">&times;</button>
+
+    <!-- Botão de gravação -->
+    <div class="button-group">
+        <button id="record" title="Segure para gravar"></button>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let recordedBlobs = [];
+        let stream;
+        const video = document.querySelector('video#video');
+        const recordButton = document.getElementById('record');
+        const closeButton = document.getElementById('close');
+
+        async function startCamera() {
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: 'user', // Pode mudar para 'environment' para a câmera traseira
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: true
+                };
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        recordedBlobs.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    const superBuffer = new Blob(recordedBlobs, { type: 'video/webm' });
+                    // Aqui você pode enviar o vídeo para o backend
+                    console.log('Vídeo gravado:', superBuffer);
+                };
+            } catch (error) {
+                console.error('Erro ao acessar a câmera:', error);
+                alert('Não foi possível acessar a câmera. Verifique se as permissões estão corretas.' );
+            }
+        }
+
+        // Iniciar a câmera ao carregar a página
+        startCamera();
+
+        // Gravar enquanto o botão estiver pressionado
+        recordButton.addEventListener('mousedown', () => {
+            recordedBlobs = [];
+            mediaRecorder.start();
+            console.log('Gravação iniciada');
+        });
+
+        recordButton.addEventListener('mouseup', () => {
+            mediaRecorder.stop();
+            console.log('Gravação parada');
+        });
+
+        // Voltar para a página anterior ao clicar no botão "X"
+        closeButton.onclick = () => {
+            // Parar a câmera
+            stream.getTracks().forEach(track => track.stop());
+            // Voltar à página anterior
+            window.history.back();
+        };
+    </script>
+</body>
+</html>
